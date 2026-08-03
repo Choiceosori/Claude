@@ -1,0 +1,88 @@
+// MusicRecord App — Prisma schema
+// SQLite is used so the whole app can be self-hosted by a single school
+// without needing an external cloud database.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  PASSED
+  NEEDS_PRACTICE
+}
+
+model Teacher {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+}
+
+/// A student is identified by grade + class + number (전통적인 학급 출석번호),
+/// not a password — keeps the flow simple enough for elementary students
+/// while still giving teachers a stable identity to track growth over time.
+model Student {
+  id          String       @id @default(cuid())
+  grade       Int
+  classNo     Int
+  number      Int
+  name        String
+  createdAt   DateTime     @default(now())
+  submissions Submission[]
+
+  @@unique([grade, classNo, number, name])
+}
+
+/// A teacher-created assignment: one target song for one instrument/grade.
+model Assignment {
+  id            String       @id @default(cuid())
+  title         String
+  instrument    String
+  guideType     String
+  targetGrade   Int
+  description   String       @default("")
+  sheetMusicUrl String?
+  dueDate       DateTime?
+  createdAt     DateTime     @default(now())
+  submissions   Submission[]
+}
+
+/// One recorded-and-submitted performance from a student for an assignment.
+model Submission {
+  id           String           @id @default(cuid())
+  studentId    String
+  assignmentId String
+  videoUrl     String
+  mimeType     String           @default("video/webm")
+  status       SubmissionStatus @default(SUBMITTED)
+  score        Int?
+  submittedAt  DateTime         @default(now())
+  reviewedAt   DateTime?
+
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  feedbacks    Feedback[]
+
+  @@index([studentId])
+  @@index([assignmentId])
+}
+
+/// Timestamp-anchored comment left by a teacher while reviewing a submission.
+model Feedback {
+  id           String     @id @default(cuid())
+  submissionId String
+  timestampSec Float
+  comment      String
+  createdAt    DateTime   @default(now())
+
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
