@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { loadStudentIdentity, StudentIdentity } from "@/lib/studentIdentity";
+import { useStudentSession } from "@/lib/useStudentSession";
 import { getInstrumentGuide } from "@/lib/instrumentGuides";
 import CameraRecorder from "@/components/CameraRecorder";
 
@@ -19,17 +19,14 @@ type Assignment = {
 export default function RecordPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [identity, setIdentity] = useState<StudentIdentity | null | undefined>(undefined);
+  const { session } = useStudentSession();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = loadStudentIdentity();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is only available client-side
-    setIdentity(stored);
-    if (!stored) return;
+    if (!session) return;
 
     fetch(`/api/assignments/${params.id}`)
       .then(async (res) => {
@@ -38,15 +35,14 @@ export default function RecordPage() {
       })
       .then(setAssignment)
       .catch(() => setLoadError("과제를 불러오지 못했어요."));
-  }, [params.id]);
+  }, [session, params.id]);
 
   async function handleSubmit(blob: Blob, mimeType: string) {
-    if (!identity || !assignment) return;
+    if (!assignment) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
       const formData = new FormData();
-      formData.append("studentId", identity.id);
       formData.append("assignmentId", assignment.id);
       const ext = mimeType.includes("mp4") ? "mp4" : "webm";
       formData.append("video", blob, `recording.${ext}`);
@@ -65,11 +61,11 @@ export default function RecordPage() {
     }
   }
 
-  if (identity === undefined) {
+  if (session === undefined) {
     return <div className="p-8 text-center text-zinc-400">불러오는 중...</div>;
   }
 
-  if (!identity) {
+  if (!session) {
     return (
       <div className="p-8 text-center">
         <p className="mb-4 text-zinc-600 dark:text-zinc-300">먼저 내 정보를 입력해 주세요.</p>

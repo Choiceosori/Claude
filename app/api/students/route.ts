@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTeacherSession } from "@/lib/auth";
+import { createStudentSession } from "@/lib/studentAuth";
 import { getBadgeTier } from "@/lib/badges";
 
 function countPassedSongs(submissions: { assignmentId: string; status: string }[]) {
@@ -35,6 +36,14 @@ export async function POST(request: NextRequest) {
     where: { grade_classNo_number_name: { grade, classNo, number, name } },
     update: {},
     create: { grade, classNo, number, name },
+  });
+
+  await createStudentSession({
+    studentId: student.id,
+    grade: student.grade,
+    classNo: student.classNo,
+    number: student.number,
+    name: student.name,
   });
 
   return NextResponse.json(student);

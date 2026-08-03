@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { clearStudentIdentity, loadStudentIdentity, StudentIdentity } from "@/lib/studentIdentity";
+import { useStudentSession } from "@/lib/useStudentSession";
 import StudentIdentityForm from "@/components/StudentIdentityForm";
 import BadgeDisplay from "@/components/BadgeDisplay";
 
@@ -41,17 +41,17 @@ const STATUS_STYLE: Record<SubmissionSummary["status"], string> = {
 };
 
 export default function StudentDashboardPage() {
-  const [identity, setIdentity] = useState<StudentIdentity | null | undefined>(undefined);
+  const { session, refresh } = useStudentSession();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const loadDashboard = useCallback(async (student: StudentIdentity) => {
+  const loadDashboard = useCallback(async (grade: number, studentId: string) => {
     setLoading(true);
     try {
       const [assignmentsRes, detailRes] = await Promise.all([
-        fetch(`/api/assignments?grade=${student.grade}`),
-        fetch(`/api/students/${student.id}`),
+        fetch(`/api/assignments?grade=${grade}`),
+        fetch(`/api/students/${studentId}`),
       ]);
       const [assignmentsData, detailData] = await Promise.all([assignmentsRes.json(), detailRes.json()]);
       setAssignments(assignmentsData);
@@ -62,32 +62,25 @@ export default function StudentDashboardPage() {
   }, []);
 
   useEffect(() => {
-    const stored = loadStudentIdentity();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is only available client-side
-    setIdentity(stored);
-    if (stored) loadDashboard(stored);
-  }, [loadDashboard]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an async fetch; state updates happen after it resolves
+    if (session) loadDashboard(session.grade, session.studentId);
+  }, [session, loadDashboard]);
 
-  function handleIdentified(newIdentity: StudentIdentity) {
-    setIdentity(newIdentity);
-    loadDashboard(newIdentity);
-  }
-
-  function handleChangeIdentity() {
-    clearStudentIdentity();
-    setIdentity(null);
+  async function handleChangeIdentity() {
+    await fetch("/api/students/logout", { method: "POST" });
     setAssignments([]);
     setDetail(null);
+    refresh();
   }
 
-  if (identity === undefined) {
+  if (session === undefined) {
     return <div className="p-8 text-center text-zinc-400">불러오는 중...</div>;
   }
 
-  if (!identity) {
+  if (!session) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16">
-        <StudentIdentityForm onIdentified={handleIdentified} />
+        <StudentIdentityForm onIdentified={refresh} />
       </div>
     );
   }
@@ -105,9 +98,9 @@ export default function StudentDashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            {identity.grade}학년 {identity.classNo}반 {identity.number}번
+            {session.grade}학년 {session.classNo}반 {session.number}번
           </p>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{identity.name}님, 안녕하세요!</h1>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{session.name}님, 안녕하세요!</h1>
         </div>
         <button
           onClick={handleChangeIdentity}

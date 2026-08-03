@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { loadStudentIdentity, StudentIdentity } from "@/lib/studentIdentity";
+import { useStudentSession } from "@/lib/useStudentSession";
 import VideoPlayerWithFeedback from "@/components/VideoPlayerWithFeedback";
 
 type SubmissionDetail = {
@@ -22,27 +22,24 @@ const STATUS_LABEL: Record<SubmissionDetail["status"], string> = {
 
 export default function StudentSubmissionPage() {
   const params = useParams<{ id: string }>();
-  const [identity, setIdentity] = useState<StudentIdentity | null | undefined>(undefined);
+  const { session } = useStudentSession();
   const [submission, setSubmission] = useState<SubmissionDetail | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const stored = loadStudentIdentity();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is only available client-side
-    setIdentity(stored);
-    if (!stored) return;
+    if (!session) return;
 
-    fetch(`/api/submissions/${params.id}?studentId=${stored.id}`)
+    fetch(`/api/submissions/${params.id}`)
       .then(async (res) => {
         if (!res.ok) throw new Error();
         return res.json();
       })
       .then(setSubmission)
       .catch(() => setError("제출물을 불러오지 못했어요."));
-  }, [params.id]);
+  }, [session, params.id]);
 
-  if (identity === undefined) return <div className="p-8 text-center text-zinc-400">불러오는 중...</div>;
-  if (!identity) {
+  if (session === undefined) return <div className="p-8 text-center text-zinc-400">불러오는 중...</div>;
+  if (!session) {
     return (
       <div className="p-8 text-center">
         <Link href="/student" className="text-emerald-600 underline">
@@ -67,7 +64,7 @@ export default function StudentSubmissionPage() {
         {submission.score !== null ? ` · ${submission.score}점` : ""}
       </p>
       <VideoPlayerWithFeedback
-        videoSrc={`/api/media/submissions/${submission.id}?studentId=${identity.id}`}
+        videoSrc={`/api/media/submissions/${submission.id}`}
         feedbacks={submission.feedbacks}
         onAddFeedback={() => {}}
         readOnly

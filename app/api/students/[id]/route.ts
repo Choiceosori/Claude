@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTeacherSession } from "@/lib/auth";
+import { getStudentSession } from "@/lib/studentAuth";
 import { getBadgeTier, getNextBadgeGoal } from "@/lib/badges";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
+
+  const [teacherSession, studentSession] = await Promise.all([getTeacherSession(), getStudentSession()]);
+  const isOwner = studentSession?.studentId === id;
+  if (!teacherSession && !isOwner) {
+    return NextResponse.json({ error: "접근 권한이 없습니다." }, { status: 403 });
+  }
 
   const student = await prisma.student.findUnique({
     where: { id },

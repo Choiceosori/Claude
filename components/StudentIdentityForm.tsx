@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { saveStudentIdentity, StudentIdentity } from "@/lib/studentIdentity";
 
-export default function StudentIdentityForm({ onIdentified }: { onIdentified: (identity: StudentIdentity) => void }) {
+export default function StudentIdentityForm({ onIdentified }: { onIdentified: () => void }) {
   const [grade, setGrade] = useState("");
   const [classNo, setClassNo] = useState("");
   const [number, setNumber] = useState("");
@@ -31,15 +30,8 @@ export default function StudentIdentityForm({ onIdentified }: { onIdentified: (i
         setError(data.error ?? "정보를 확인해 주세요.");
         return;
       }
-      const identity: StudentIdentity = {
-        id: data.id,
-        grade: data.grade,
-        classNo: data.classNo,
-        number: data.number,
-        name: data.name,
-      };
-      saveStudentIdentity(identity);
-      onIdentified(identity);
+      // The server has set an httpOnly session cookie bound to this student's DB record.
+      onIdentified();
     } catch {
       setError("네트워크 오류가 발생했어요. 다시 시도해 주세요.");
     } finally {
