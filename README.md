@@ -18,8 +18,8 @@
 ## 기술 스택
 
 - Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
-- Prisma 7 (SQLite, `@prisma/adapter-better-sqlite3`) — 별도 클라우드 DB 없이 학교 자체
-  서버에 설치해 운영할 수 있습니다.
+- Prisma 5.22 (SQLite) — 별도 클라우드 DB 없이 학교 자체 서버에 설치해 운영할 수 있습니다.
+  Node 22.12 이상을 요구하는 최신 Prisma 대신 5.x를 사용해 Node 22.11에서도 동작합니다.
 - 브라우저 `MediaRecorder` / `getUserMedia` API로 영상·음성 녹화
 - 업로드된 영상/악보는 로컬 디스크(`storage/uploads`)에 저장되고, Range 요청을 지원하는
   자체 미디어 API로 서빙됩니다.

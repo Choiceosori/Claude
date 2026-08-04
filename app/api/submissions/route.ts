@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     where: {
       ...(assignmentId ? { assignmentId } : {}),
       ...(studentId ? { studentId } : {}),
-      ...(status ? { status: status as never } : {}),
+      ...(status ? { status } : {}),
     },
     include: {
       assignment: true,
