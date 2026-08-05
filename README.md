@@ -13,6 +13,9 @@
 - **교사**: 아이디/비밀번호 로그인 → 과제(악기·대상 학년·기한·악보) 생성 →
   제출물 목록 확인 → 영상 재생 중 타임스탬프 코멘트 작성 → 통과/연습 필요 상태 및
   점수 부여 → 학생별 통과곡 수·배지·제출 현황 통계.
+- **관리자(전체 관리자)**: 계정은 하나만 존재하며, 교사 계정을 생성·삭제할 수 있는
+  "계정 관리" 페이지(`/teacher/admin`)에 접근할 수 있습니다. 일반 교사는 이 페이지에
+  접근할 수 없습니다.
 - **배지 제도**: 3곡 통과 시 동장 🥉, 5곡 은장 🥈, 8곡 금장 🥇.
 
 ## 기술 스택
@@ -33,8 +36,11 @@ npx prisma migrate dev # DB 생성 + 마이그레이션 (seed 자동 실행)
 npm run dev
 ```
 
-기본 교사 계정 (seed 데이터): `teacher` / `teacher1234` — **운영 환경에서는 반드시
-비밀번호를 변경하세요.**
+기본 관리자 계정 (seed 데이터): `teacher` / `teacher1234` — 이 계정이 유일한 전체 관리자이며,
+`/teacher/admin`에서 교사 계정을 추가로 만들 수 있습니다. `npm run start`가 실행될 때마다
+seed가 자동으로 다시 실행되어 이 관리자 계정의 비밀번호·권한을 항상 아래 값으로 맞춰
+둡니다(로그인이 안 될 때 복구 수단이기도 합니다). **운영 환경에서는 `ADMIN_USERNAME`
+/ `ADMIN_PASSWORD` 환경변수로 반드시 기본값 대신 직접 지정하세요.**
 
 - 학생 페이지: [http://localhost:3000/student](http://localhost:3000/student)
 - 교사 페이지: [http://localhost:3000/teacher](http://localhost:3000/teacher)
@@ -48,26 +54,27 @@ SQLite 파일과 업로드된 영상은 로컬 디스크에 저장되므로, 재
    선택 → 이 저장소(`Choiceosori/Claude`)를 연결합니다.
 2. 프로젝트가 생성되면 서비스에 **Volume**을 추가하고 마운트 경로를 `/data`로 지정합니다
    (Service → Settings → Volumes → Add Volume → Mount path `/data`).
-3. 서비스 **Variables**에 아래 환경변수를 추가합니다.
+3. 서비스 **Variables**에 아래 환경변수를 추가합니다. `ADMIN_USERNAME`/`ADMIN_PASSWORD`는
+   실제 운영할 관리자 계정 정보로 반드시 바꿔서 넣으세요 — 기본값(`teacher`/`teacher1234`)을
+   그대로 두면 초기 로그인 정보가 README에 공개된 것과 같아집니다.
    ```
    DATABASE_URL=file:/data/dev.db
    SESSION_SECRET=<openssl rand -hex 32 등으로 생성한 긴 랜덤 문자열>
    UPLOAD_DIR=/data/uploads
+   ADMIN_USERNAME=<원하는 관리자 아이디>
+   ADMIN_PASSWORD=<원하는 관리자 비밀번호, 8자 이상>
    ```
 4. Deploy를 실행하면 Railway(Nixpacks)가 자동으로 `npm install` → `npm run build`
-   (`prisma generate` + `next build`) → `npm run start` (`prisma migrate deploy` + `next start`)
-   순서로 빌드·기동합니다. 포트는 Railway가 주입하는 `PORT` 값을 Next.js가 자동으로 사용합니다.
+   (`prisma generate` + `next build`) → `npm run start`
+   (`prisma migrate deploy` + `prisma db seed` + `next start`) 순서로 빌드·기동합니다.
+   배포될 때마다 관리자 계정이 위 `ADMIN_USERNAME`/`ADMIN_PASSWORD` 값으로 자동
+   생성·동기화되므로, 별도로 CLI를 설치해 seed를 수동 실행할 필요가 없습니다. 로그인이
+   안 될 때도 이 값들을 바꾸고 재배포하면 복구됩니다. 포트는 Railway가 주입하는 `PORT`
+   값을 Next.js가 자동으로 사용합니다.
 5. Service → Settings → Networking → **Generate Domain**을 누르면 `*.up.railway.app`
    형태의 공개 링크가 생성됩니다. 이 링크가 실제로 접속 가능한 웹앱 주소입니다.
-6. 최초 배포 후 교사 계정을 만들어야 합니다. seed 스크립트는 로컬 개발용 기본 계정
-   (`teacher`/`teacher1234`)을 만드는 용도이므로, 운영 환경에서는 Railway CLI로 한 번
-   실행해 초기 계정을 만들고 **반드시 비밀번호를 바꾸세요**.
-   ```bash
-   npm install -g @railway/cli
-   railway login
-   railway link            # 이 프로젝트와 연결
-   railway run npx tsx prisma/seed.ts
-   ```
+6. 관리자로 로그인한 뒤 `/teacher/admin`(헤더의 "계정 관리")에서 실제 사용할 교사 계정을
+   따로 만들어 나눠 주세요.
 
 ## 프로젝트 구조
 

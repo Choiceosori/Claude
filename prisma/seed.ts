@@ -4,14 +4,22 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash("teacher1234", 10);
+  // The sole admin account. Re-synced on every run (not just created once) so
+  // that changing ADMIN_PASSWORD and redeploying is always enough to recover
+  // access, even if the account already exists in a broken state.
+  const adminUsername = process.env.ADMIN_USERNAME ?? "teacher";
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "teacher1234";
+  const adminName = process.env.ADMIN_NAME ?? "관리자";
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+
   await prisma.teacher.upsert({
-    where: { username: "teacher" },
-    update: {},
+    where: { username: adminUsername },
+    update: { passwordHash, name: adminName, role: "ADMIN" },
     create: {
-      username: "teacher",
+      username: adminUsername,
       passwordHash,
-      name: "김선생",
+      name: adminName,
+      role: "ADMIN",
     },
   });
 
@@ -48,7 +56,7 @@ async function main() {
     }
   }
 
-  console.log("Seed complete. Teacher login -> username: teacher / password: teacher1234");
+  console.log(`Seed complete. Admin login -> username: ${adminUsername} / password: ${adminPassword}`);
 }
 
 main()

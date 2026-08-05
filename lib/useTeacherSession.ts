@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-export type TeacherSessionInfo = { username: string; name: string };
+export type TeacherRole = "ADMIN" | "TEACHER";
+
+export type TeacherSessionInfo = { username: string; name: string; role: TeacherRole };
 
 /** undefined = still checking, null = not logged in */
 export function useTeacherSession() {
@@ -16,7 +18,7 @@ export function useTeacherSession() {
         return res.json();
       })
       .then((data) => {
-        if (!cancelled) setSession({ username: data.username, name: data.name });
+        if (!cancelled) setSession({ username: data.username, name: data.name, role: data.role });
       })
       .catch(() => {
         if (!cancelled) setSession(null);

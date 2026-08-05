@@ -22,11 +22,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "아이디 또는 비밀번호가 올바르지 않습니다." }, { status: 401 });
   }
 
+  const role = teacher.role === "ADMIN" ? "ADMIN" : "TEACHER";
+
   await createTeacherSession({
     teacherId: teacher.id,
     username: teacher.username,
     name: teacher.name,
+    role,
   });
 
-  return NextResponse.json({ name: teacher.name, username: teacher.username });
+  return NextResponse.json({ name: teacher.name, username: teacher.username, role });
 }

@@ -2,10 +2,13 @@ import { setSessionCookie, clearSessionCookie, readSessionCookie } from "./sessi
 
 const SESSION_COOKIE = "musicrecord_teacher_session";
 
+export type TeacherRole = "ADMIN" | "TEACHER";
+
 export type TeacherSession = {
   teacherId: string;
   username: string;
   name: string;
+  role: TeacherRole;
 };
 
 export async function createTeacherSession(session: TeacherSession) {
@@ -21,12 +24,14 @@ export async function getTeacherSession(): Promise<TeacherSession | null> {
   if (
     typeof payload?.teacherId === "string" &&
     typeof payload?.username === "string" &&
-    typeof payload?.name === "string"
+    typeof payload?.name === "string" &&
+    (payload?.role === "ADMIN" || payload?.role === "TEACHER")
   ) {
     return {
       teacherId: payload.teacherId,
       username: payload.username,
       name: payload.name,
+      role: payload.role,
     };
   }
   return null;

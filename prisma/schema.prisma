@@ -11,11 +11,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// "ADMIN" | "TEACHER" — plain String for the same reason Submission.status is
+/// (SQLite has no native enum type). There is exactly one ADMIN account,
+/// provisioned by prisma/seed.ts; ADMIN can create/remove TEACHER accounts.
 model Teacher {
   id           String   @id @default(cuid())
   username     String   @unique
   passwordHash String
   name         String
+  role         String   @default("TEACHER")
   createdAt    DateTime @default(now())
 }
 
