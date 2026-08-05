@@ -18,6 +18,12 @@ export default function TeacherHeader({ session }: { session: TeacherSessionInfo
         🎵 MusicRecord 교사용
       </Link>
       <div className="flex items-center gap-3 text-sm">
+        <Link
+          href="/teacher/students"
+          className="rounded-full border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          학생 관리
+        </Link>
         {session.role === "ADMIN" && (
           <Link
             href="/teacher/admin"

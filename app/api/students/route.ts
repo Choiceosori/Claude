@@ -38,15 +38,20 @@ export async function POST(request: NextRequest) {
     create: { grade, classNo, number, name },
   });
 
-  await createStudentSession({
-    studentId: student.id,
-    grade: student.grade,
-    classNo: student.classNo,
-    number: student.number,
-    name: student.name,
-  });
+  // A teacher adding a student on the "학생 관리" page is identifying someone
+  // else, not themselves — don't overwrite the teacher's own browser session.
+  const teacherSession = await getTeacherSession();
+  if (!teacherSession) {
+    await createStudentSession({
+      studentId: student.id,
+      grade: student.grade,
+      classNo: student.classNo,
+      number: student.number,
+      name: student.name,
+    });
+  }
 
-  return NextResponse.json(student);
+  return NextResponse.json(student, { status: 201 });
 }
 
 /** Teacher-only: list students (optionally filtered by grade/class) with badge progress. */

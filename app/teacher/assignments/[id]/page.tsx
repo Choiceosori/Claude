@@ -86,12 +86,20 @@ export default function AssignmentDetailPage() {
               <p className="mt-2 text-xs text-amber-600">악보가 등록되지 않았어요.</p>
             )}
           </div>
-          <button
-            onClick={handleDelete}
-            className="shrink-0 rounded-full border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
-          >
-            과제 삭제
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <Link
+              href={`/teacher/assignments/${params.id}/edit`}
+              className="rounded-full border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              과제 수정
+            </Link>
+            <button
+              onClick={handleDelete}
+              className="rounded-full border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
+            >
+              과제 삭제
+            </button>
+          </div>
         </div>
 
         <h2 className="mb-3 text-lg font-semibold text-zinc-800 dark:text-zinc-100">제출물 ({submissions.length}건)</h2>

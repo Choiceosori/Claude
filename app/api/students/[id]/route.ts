@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getTeacherSession } from "@/lib/auth";
 import { getStudentSession } from "@/lib/studentAuth";
@@ -48,4 +49,70 @@ export async function GET(_request: Request, { params }: Params) {
     nextGoal: getNextBadgeGoal(passedSongs),
     submissions: student.submissions,
   });
+}
+
+/** Teacher-only: fix a student's grade/class/number/name (typos, class reassignment, etc). */
+export async function PATCH(request: NextRequest, { params }: Params) {
+  const session = await getTeacherSession();
+  if (!session) {
+    return NextResponse.json({ error: "교사 로그인이 필요합니다." }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+  }
+
+  const data: Record<string, unknown> = {};
+  if (body.grade !== undefined) {
+    const grade = Number(body.grade);
+    if (!Number.isInteger(grade) || grade < 1 || grade > 6) {
+      return NextResponse.json({ error: "학년을 확인해 주세요." }, { status: 400 });
+    }
+    data.grade = grade;
+  }
+  if (body.classNo !== undefined) {
+    const classNo = Number(body.classNo);
+    if (!Number.isInteger(classNo) || classNo < 1) {
+      return NextResponse.json({ error: "반을 확인해 주세요." }, { status: 400 });
+    }
+    data.classNo = classNo;
+  }
+  if (body.number !== undefined) {
+    const number = Number(body.number);
+    if (!Number.isInteger(number) || number < 1) {
+      return NextResponse.json({ error: "번호를 확인해 주세요." }, { status: 400 });
+    }
+    data.number = number;
+  }
+  if (body.name !== undefined) {
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) {
+      return NextResponse.json({ error: "이름을 입력해 주세요." }, { status: 400 });
+    }
+    data.name = name;
+  }
+
+  try {
+    const student = await prisma.student.update({ where: { id }, data });
+    return NextResponse.json(student);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json({ error: "같은 학년/반/번호/이름을 가진 학생이 이미 있어요." }, { status: 409 });
+    }
+    throw e;
+  }
+}
+
+/** Teacher-only: remove a student and cascade their submissions/feedback. */
+export async function DELETE(_request: Request, { params }: Params) {
+  const session = await getTeacherSession();
+  if (!session) {
+    return NextResponse.json({ error: "교사 로그인이 필요합니다." }, { status: 401 });
+  }
+
+  const { id } = await params;
+  await prisma.student.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
 }
