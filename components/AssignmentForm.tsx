@@ -38,6 +38,10 @@ export default function AssignmentForm({ assignmentId, initial, submitLabel, onS
   const [sheetFile, setSheetFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  // Tracks the assignment once the first API call creates it, so retrying
+  // after a sheet-music upload failure PATCHes it instead of creating a
+  // second, duplicate assignment.
+  const [savedAssignmentId, setSavedAssignmentId] = useState(assignmentId ?? null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,8 +57,8 @@ export default function AssignmentForm({ assignmentId, initial, submitLabel, onS
         dueDate: dueDate || null,
       };
 
-      const res = await fetch(assignmentId ? `/api/assignments/${assignmentId}` : "/api/assignments", {
-        method: assignmentId ? "PATCH" : "POST",
+      const res = await fetch(savedAssignmentId ? `/api/assignments/${savedAssignmentId}` : "/api/assignments", {
+        method: savedAssignmentId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -63,6 +67,7 @@ export default function AssignmentForm({ assignmentId, initial, submitLabel, onS
         setError(assignment.error ?? "저장에 실패했어요.");
         return;
       }
+      setSavedAssignmentId(assignment.id);
 
       if (sheetFile) {
         try {
@@ -74,13 +79,15 @@ export default function AssignmentForm({ assignmentId, initial, submitLabel, onS
           });
           if (!sheetRes.ok) {
             const sheetError = await sheetRes.json();
-            setError(`과제는 저장됐지만 악보 업로드에 실패했어요: ${sheetError.error ?? ""}`);
-            onSaved(assignment);
+            setError(
+              `과제 내용은 저장됐지만 악보 업로드에 실패했어요: ${sheetError.error ?? ""} — 다시 "${submitLabel}"을 눌러 악보만 다시 올려보세요.`
+            );
             return;
           }
         } catch {
-          setError("과제는 저장됐지만 악보 업로드에 실패했어요.");
-          onSaved(assignment);
+          setError(
+            `과제 내용은 저장됐지만 악보 업로드에 실패했어요. 다시 "${submitLabel}"을 눌러 악보만 다시 올려보세요.`
+          );
           return;
         }
       }
