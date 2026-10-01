@@ -1,19 +1,21 @@
 // MusicRecord App — Prisma schema
-// SQLite is used so the whole app can be self-hosted by a single school
-// without needing an external cloud database.
+// PostgreSQL (e.g. Neon/Supabase/Vercel Postgres) so the app can run on
+// serverless hosts like Vercel, whose filesystem is read-only at runtime —
+// unlike the self-hosted SQLite setup this project started with.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-/// "ADMIN" | "TEACHER" — plain String for the same reason Submission.status is
-/// (SQLite has no native enum type). There is exactly one ADMIN account,
-/// provisioned by prisma/seed.ts; ADMIN can create/remove TEACHER accounts.
+/// "ADMIN" | "TEACHER" — plain String (not a native Postgres enum) to match
+/// Submission.status and keep both app-level-validated the same way. There is
+/// exactly one ADMIN account, provisioned by prisma/seed.ts; ADMIN can
+/// create/remove TEACHER accounts.
 model Teacher {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -59,9 +61,9 @@ model Submission {
   assignmentId String
   videoUrl     String
   mimeType     String    @default("video/webm")
-  /// One of "SUBMITTED" | "PASSED" | "NEEDS_PRACTICE" — plain String because
-  /// SQLite has no native enum type and Prisma 5's SQLite connector can't
-  /// emulate one; validated at the API layer instead.
+  /// One of "SUBMITTED" | "PASSED" | "NEEDS_PRACTICE" — plain String rather
+  /// than a native Postgres enum so a bad/old value never breaks a query;
+  /// validated at the API layer instead.
   status       String    @default("SUBMITTED")
   score        Int?
   submittedAt  DateTime  @default(now())

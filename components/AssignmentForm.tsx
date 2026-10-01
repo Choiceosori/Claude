@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { INSTRUMENT_GUIDES } from "@/lib/instrumentGuides";
+import { uploadSheetMusic } from "@/lib/clientUpload";
 
 export type AssignmentFormInitial = {
   title: string;
@@ -64,15 +65,21 @@ export default function AssignmentForm({ assignmentId, initial, submitLabel, onS
       }
 
       if (sheetFile) {
-        const formData = new FormData();
-        formData.append("file", sheetFile);
-        const sheetRes = await fetch(`/api/assignments/${assignment.id}/sheet-music`, {
-          method: "POST",
-          body: formData,
-        });
-        if (!sheetRes.ok) {
-          const sheetError = await sheetRes.json();
-          setError(`과제는 저장됐지만 악보 업로드에 실패했어요: ${sheetError.error ?? ""}`);
+        try {
+          const pathname = await uploadSheetMusic(assignment.id, sheetFile);
+          const sheetRes = await fetch(`/api/assignments/${assignment.id}/sheet-music`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pathname }),
+          });
+          if (!sheetRes.ok) {
+            const sheetError = await sheetRes.json();
+            setError(`과제는 저장됐지만 악보 업로드에 실패했어요: ${sheetError.error ?? ""}`);
+            onSaved(assignment);
+            return;
+          }
+        } catch {
+          setError("과제는 저장됐지만 악보 업로드에 실패했어요.");
           onSaved(assignment);
           return;
         }

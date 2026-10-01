@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTeacherSession } from "@/lib/auth";
+import { deleteUploadedFile } from "@/lib/storage";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -44,6 +45,23 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
+  const assignment = await prisma.assignment.findUnique({
+    where: { id },
+    include: { submissions: { select: { videoUrl: true } } },
+  });
+  if (!assignment) {
+    return NextResponse.json({ error: "과제를 찾을 수 없습니다." }, { status: 404 });
+  }
+
   await prisma.assignment.delete({ where: { id } });
+
+  // Cascade-deleted the DB rows; best-effort clean up the now-unreferenced
+  // blobs too so storage usage doesn't grow forever. Not fatal if this fails.
+  const pathnames = [
+    ...(assignment.sheetMusicUrl ? [assignment.sheetMusicUrl] : []),
+    ...assignment.submissions.map((s) => s.videoUrl),
+  ];
+  await Promise.all(pathnames.map((p) => deleteUploadedFile(p).catch(() => {})));
+
   return NextResponse.json({ ok: true });
 }

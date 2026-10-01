@@ -1,44 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createReadStream } from "fs";
-import { stat } from "fs/promises";
-import { Readable } from "stream";
+import { get } from "@vercel/blob";
 
-/** Serves a local file with HTTP Range support so <video> seeking works. */
-export async function serveFile(request: NextRequest, absolutePath: string, mimeType: string) {
-  let size: number;
+/**
+ * Proxies a private Vercel Blob object through our own route, forwarding
+ * Range requests so <video> seeking keeps working. The client only ever
+ * sees our /api/media/... URL — the actual Blob pathname/token never reach
+ * the browser, preserving the same teacher-or-owner access control we had
+ * with local-disk storage.
+ */
+export async function serveBlobFile(request: NextRequest, pathname: string, fallbackMimeType?: string) {
+  const range = request.headers.get("range");
+
+  let result;
   try {
-    const stats = await stat(absolutePath);
-    size = stats.size;
+    result = await get(pathname, {
+      access: "private",
+      headers: range ? { Range: range } : undefined,
+    });
   } catch {
+    return NextResponse.json({ error: "파일을 불러오지 못했습니다." }, { status: 502 });
+  }
+
+  if (!result || !result.stream) {
     return NextResponse.json({ error: "파일을 찾을 수 없습니다." }, { status: 404 });
   }
 
-  const range = request.headers.get("range");
-  if (!range) {
-    const stream = Readable.toWeb(createReadStream(absolutePath)) as ReadableStream;
-    return new NextResponse(stream, {
-      status: 200,
-      headers: {
-        "Content-Type": mimeType,
-        "Content-Length": String(size),
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "private, no-store",
-      },
-    });
-  }
+  const contentRange = result.headers.get("content-range");
+  const contentLength = result.headers.get("content-length");
+  const contentType = result.blob.contentType || fallbackMimeType || "application/octet-stream";
 
-  const match = /bytes=(\d*)-(\d*)/.exec(range);
-  const start = match?.[1] ? parseInt(match[1], 10) : 0;
-  const end = match?.[2] ? parseInt(match[2], 10) : size - 1;
-  const chunkSize = end - start + 1;
-
-  const stream = Readable.toWeb(createReadStream(absolutePath, { start, end })) as ReadableStream;
-  return new NextResponse(stream, {
-    status: 206,
+  return new NextResponse(result.stream, {
+    status: contentRange ? 206 : 200,
     headers: {
-      "Content-Type": mimeType,
-      "Content-Length": String(chunkSize),
-      "Content-Range": `bytes ${start}-${end}/${size}`,
+      "Content-Type": contentType,
+      ...(contentLength ? { "Content-Length": contentLength } : {}),
+      ...(contentRange ? { "Content-Range": contentRange } : {}),
       "Accept-Ranges": "bytes",
       "Cache-Control": "private, no-store",
     },

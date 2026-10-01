@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTeacherSession } from "@/lib/auth";
 import { getStudentSession } from "@/lib/studentAuth";
-import { resolveUploadPath } from "@/lib/storage";
-import { serveFile } from "@/lib/serveFile";
+import { serveBlobFile } from "@/lib/serveFile";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -21,7 +20,5 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "접근 권한이 없습니다." }, { status: 403 });
   }
 
-  const [subdir, filename] = submission.videoUrl.split("/");
-  const absolutePath = resolveUploadPath(subdir, filename);
-  return serveFile(request, absolutePath, submission.mimeType);
+  return serveBlobFile(request, submission.videoUrl, submission.mimeType);
 }

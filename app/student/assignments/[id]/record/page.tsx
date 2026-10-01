@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStudentSession } from "@/lib/useStudentSession";
 import { getInstrumentGuide } from "@/lib/instrumentGuides";
+import { uploadSubmissionVideo } from "@/lib/clientUpload";
 import CameraRecorder from "@/components/CameraRecorder";
 
 type Assignment = {
@@ -42,12 +43,13 @@ export default function RecordPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const formData = new FormData();
-      formData.append("assignmentId", assignment.id);
-      const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-      formData.append("video", blob, `recording.${ext}`);
+      const pathname = await uploadSubmissionVideo(assignment.id, blob, mimeType);
 
-      const res = await fetch("/api/submissions", { method: "POST", body: formData });
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId: assignment.id, pathname }),
+      });
       const data = await res.json();
       if (!res.ok) {
         setSubmitError(data.error ?? "제출에 실패했어요. 다시 시도해 주세요.");

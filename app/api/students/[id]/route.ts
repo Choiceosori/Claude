@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getTeacherSession } from "@/lib/auth";
 import { getStudentSession } from "@/lib/studentAuth";
 import { getBadgeTier, getNextBadgeGoal } from "@/lib/badges";
+import { deleteUploadedFile } from "@/lib/storage";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -113,6 +114,18 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   const { id } = await params;
+  const student = await prisma.student.findUnique({
+    where: { id },
+    include: { submissions: { select: { videoUrl: true } } },
+  });
+  if (!student) {
+    return NextResponse.json({ error: "학생을 찾을 수 없습니다." }, { status: 404 });
+  }
+
   await prisma.student.delete({ where: { id } });
+
+  // Best-effort: the submission rows are gone, clean up their video blobs too.
+  await Promise.all(student.submissions.map((s) => deleteUploadedFile(s.videoUrl).catch(() => {})));
+
   return NextResponse.json({ ok: true });
 }
