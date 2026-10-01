@@ -84,9 +84,6 @@ export default function CameraRecorder({
           audio: constraints.audioId ? { deviceId: { exact: constraints.audioId } } : true,
         });
         streamRef.current = stream;
-        if (liveVideoRef.current) {
-          liveVideoRef.current.srcObject = stream;
-        }
 
         const devices = await navigator.mediaDevices.enumerateDevices();
         setVideoDevices(devices.filter((d) => d.kind === "videoinput"));
@@ -115,6 +112,17 @@ export default function CameraRecorder({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The live <video> element only exists in the DOM while stage is "idle" or
+  // "recording" (it's a different JSX branch during "loading"/"preview"), and
+  // each stage transition mounts a fresh <video> node. Attaching srcObject
+  // has to happen here, after that node exists, rather than right after
+  // getUserMedia resolves — at that point the ref is still null.
+  useEffect(() => {
+    if ((stage === "idle" || stage === "recording") && liveVideoRef.current) {
+      liveVideoRef.current.srcObject = streamRef.current;
+    }
+  }, [stage]);
 
   function switchCamera() {
     if (videoDevices.length < 2) return;
@@ -166,9 +174,8 @@ export default function CameraRecorder({
     setRecordedUrl("");
     recordedBlobRef.current = null;
     setElapsed(0);
-    setStage("idle");
     if (!streamRef.current) startCamera({ videoId: videoDeviceId, audioId: audioDeviceId });
-    else if (liveVideoRef.current) liveVideoRef.current.srcObject = streamRef.current;
+    else setStage("idle");
   }
 
   function handleSubmit() {
