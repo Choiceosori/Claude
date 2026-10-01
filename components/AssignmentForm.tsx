@@ -84,9 +84,10 @@ export default function AssignmentForm({ assignmentId, initial, submitLabel, onS
             );
             return;
           }
-        } catch {
+        } catch (uploadError) {
+          const detail = uploadError instanceof Error ? uploadError.message : String(uploadError);
           setError(
-            `과제 내용은 저장됐지만 악보 업로드에 실패했어요. 다시 "${submitLabel}"을 눌러 악보만 다시 올려보세요.`
+            `과제 내용은 저장됐지만 악보 업로드에 실패했어요: ${detail} — 다시 "${submitLabel}"을 눌러 악보만 다시 올려보세요.`
           );
           return;
         }

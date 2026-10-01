@@ -56,8 +56,9 @@ export default function RecordPage() {
         return;
       }
       router.push(`/student/submissions/${data.id}`);
-    } catch {
-      setSubmitError("네트워크 오류로 제출에 실패했어요.");
+    } catch (uploadError) {
+      const detail = uploadError instanceof Error ? uploadError.message : String(uploadError);
+      setSubmitError(`제출에 실패했어요: ${detail}`);
     } finally {
       setSubmitting(false);
     }
